@@ -142,10 +142,12 @@ namespace Interception.OpenTracing.Prometheus
                 { "parentSpanId", tags["parentSpanId"] },
             }.Where(t => t.Value != null).Select(t => $"{t.Key}:{t.Value?.ToString().EscapeTagValue()}").ToArray());
 
-            Console.WriteLine($"finishDate: {finishDate.ToString()}");
-
             DogStatsd.Histogram(metricType, duration, tags: tags.Where(t => t.Value != null && t.Key != "type").Select(t => $"{ t.Key}:{t.Value?.ToString().EscapeTagValue()}").ToArray());
+            var statTags = tags.Where(t => t.Value != null && !new List<string> { "startDate", "finishDate", "spanId", "parentSpanId", "traceId", "type" }.Contains(t.Key)).Select(t => $"{ t.Key}:{t.Value?.ToString().EscapeTagValue()}").ToArray();
+            DogStatsd.Histogram($"{metricType}_stat", duration, tags: statTags);
+Console.WriteLine($"metricType: {metricType} tags: {string.Join(", ", statTags)}");
 
+            
             if (string.IsNullOrEmpty(span.Context.ParentSpanId))
             {
                 DogStatsd.Histogram("metric_info", 1, tags: tags.Where(t => t.Value != null && !new List<string> { "startDate", "finishDate", "spanId", "parentSpanId" }.Contains(t.Key)).Select(t => $"{ t.Key}:{t.Value?.ToString().EscapeTagValue()}").ToArray());
